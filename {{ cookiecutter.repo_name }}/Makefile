@@ -1,12 +1,10 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: clean data train evaluate export requirements create_environment test_environment
 
 #################################################################################
 # GLOBALS                                                                       #
 #################################################################################
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-BUCKET = {{ cookiecutter.s3_bucket }}
-PROFILE = {{ cookiecutter.aws_profile }}
 PROJECT_NAME = {{ cookiecutter.repo_name }}
 PYTHON_INTERPRETER = {{ cookiecutter.python_interpreter }}
 
@@ -20,37 +18,27 @@ endif
 # COMMANDS                                                                      #
 #################################################################################
 
-## Install Python Dependencies
+## Install Python dependencies
 requirements: test_environment
 	pip install -r requirements.txt
 
-## Make Dataset
-data: requirements
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py
+## Transform raw data into the datasets
+data: $(PROJECT_DIR)/data/processed/train.tsv $(PROJECT_DIR)/data/processed/holdout.tsv
 
-## Delete all compiled Python files
+## Train and save the pipeline
+train: $(PROJECT_DIR)/models/pipeline.pkl
+
+## Evaluate the pipeline
+evaluate: $(PROJECT_DIR)/models/results.txt
+
+## Export the pipeline to PMML
+export: $(PROJECT_DIR)/models/pipeline.pmml
+
+## Delete all compiled Python files and derived data files
 clean:
 	find . -name "*.pyc" -exec rm {} \;
-
-## Lint using flake8
-lint:
-	flake8 --exclude=lib/,bin/,docs/conf.py .
-
-## Upload Data to S3
-sync_data_to_s3:
-ifeq (default,$(PROFILE))
-	aws s3 sync data/ s3://$(BUCKET)/data/
-else
-	aws s3 sync data/ s3://$(BUCKET)/data/ --profile $(PROFILE)
-endif
-
-## Download Data from S3
-sync_data_from_s3:
-ifeq (default,$(PROFILE))
-	aws s3 sync s3://$(BUCKET)/data/ data/
-else
-	aws s3 sync s3://$(BUCKET)/data/ data/ --profile $(PROFILE)
-endif
+	rm -rf $(PROJECT_DIR)/data/processed/*
+	rm -rf $(PROJECT_DIR)/models/*
 
 ## Set up python interpreter environment
 create_environment:
@@ -78,7 +66,20 @@ test_environment:
 # PROJECT RULES                                                                 #
 #################################################################################
 
+$(PROJECT_DIR)/data/processed/train.tsv: src/data/process.py $(PROJECT_DIR)/data/raw
+	$(PYTHON_INTERPRETER) src/data/process.py $(PROJECT_DIR)/data/raw $(PROJECT_DIR)/data/processed
 
+$(PROJECT_DIR)/data/processed/holdout.tsv: src/data/process.py $(PROJECT_DIR)/data/raw
+	$(PYTHON_INTERPRETER) src/data/process.py $(PROJECT_DIR)/data/raw $(PROJECT_DIR)/data/processed
+
+$(PROJECT_DIR)/models/pipeline.pkl: src/models/train.py $(PROJECT_DIR)/data/processed/train.tsv
+	$(PYTHON_INTERPRETER) src/models/train.py $(PROJECT_DIR)/data/processed/train.tsv $(PROJECT_DIR)/models/pipeline.pkl
+
+$(PROJECT_DIR)/models/results.txt: src/models/evaluate.py $(PROJECT_DIR)/models/pipeline.pkl $(PROJECT_DIR)/data/processed/holdout.tsv
+	$(PYTHON_INTERPRETER) src/models/evaluate.py $(PROJECT_DIR)/models/pipeline.pkl $(PROJECT_DIR)/data/processed/holdout.tsv $(PROJECT_DIR)/models/results.txt
+
+$(PROJECT_DIR)/models/pipeline.pmml: src/models/export.py $(PROJECT_DIR)/models/pipeline.pkl
+	$(PYTHON_INTERPRETER) src/models/export.py $(PROJECT_DIR)/models/pipeline.pkl $(PROJECT_DIR)/models/pipeline.pmml
 
 #################################################################################
 # Self Documenting Commands                                                     #
