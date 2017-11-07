@@ -40,6 +40,10 @@ clean:
 	rm -rf $(PROJECT_DIR)/data/processed/*
 	rm -rf $(PROJECT_DIR)/models/*
 
+## Lint using flake8
+lint:
+	flake8 --exclude=lib/,bin/,docs/conf.py .
+
 ## Set up python interpreter environment
 create_environment:
 ifeq (True,$(HAS_CONDA))

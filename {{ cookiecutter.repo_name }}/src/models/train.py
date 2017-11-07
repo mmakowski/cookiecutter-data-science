@@ -16,7 +16,6 @@ import data
 def main(training_data_file, output_file):
     """ Fits the pipeline.
     """
-    logger = logging.getLogger(__name__)
     x, y = data.load(training_data_file)
     pipeline = _train(x, y)
     _write_pkl(output_file, pipeline)
@@ -26,7 +25,9 @@ def _train(x, y):
     logger = logging.getLogger(__name__)
     # TODO: replace the below with actual implementation
     logger.error("TODO: implement _train() in src/model/train.py")
-    vectorizer = CountVectorizer(ngram_range=(1, 2), token_pattern=None, tokenizer=Splitter())
+    vectorizer = CountVectorizer(ngram_range=(1, 2),
+                                 token_pattern=None,
+                                 tokenizer=Splitter())
     feature_selector = SelectKBest(score_func=chi2, k=10)
     classifier = LogisticRegression()
     pipeline = PMMLPipeline([
