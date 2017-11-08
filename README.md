@@ -78,7 +78,7 @@ source activate <project name>
 make requirements
 ```
 
-Then `make evaluate` will train and evaluate a dummy model.
+Then `make evaluate` will train and evaluate a dummy model, and `make export` will export it to PMML.
 
 
 ### Next steps
