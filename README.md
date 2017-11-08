@@ -70,6 +70,25 @@ The directory structure of your new project looks like this:
 └── tox.ini              <- tox file with settings for running tox; see tox.testrun.org
 ```
 
+### First steps
+
+To set up the development sandbox, run:
+
+```
+make create_environment
+source activate <project name>
+make requirements
+```
+
+Then `make evaluate` will train and evaluate a dummy model.
+
+### Next steps
+
+1. Put the raw data in `data/raw`, or create a script to download the data from source repository.
+2. Edit `src/data/process.py` to transform the raw data into TSV files.
+3. Edit `src/models/train.py` to specify how the model should be trained.
+
+
 ### Installing development requirements
 ------------
 
