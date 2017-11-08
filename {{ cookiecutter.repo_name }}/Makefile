@@ -1,4 +1,4 @@
-.PHONY: clean data train evaluate export requirements create_environment test_environment
+.PHONY: clean data train evaluate export lint requirements create_environment test_environment
 
 #################################################################################
 # GLOBALS                                                                       #
@@ -12,6 +12,22 @@ ifeq (,$(shell which conda))
 HAS_CONDA=False
 else
 HAS_CONDA=True
+endif
+
+ifeq (,$(shell which git))
+IN_GIT_REPO=False
+else
+ifeq (true,$(shell git rev-parse --is-inside-work-tree 2>/dev/null))
+IN_GIT_REPO=True
+else
+IN_GIT_REPO=False
+endif
+endif
+
+ifeq (,$(shell which md5sum))
+MD5=md5
+else
+MD5=md5sum
 endif
 
 #################################################################################
@@ -32,7 +48,7 @@ train: $(PROJECT_DIR)/models/pipeline.pkl
 evaluate: $(PROJECT_DIR)/models/results.txt
 
 ## Export the pipeline to PMML
-export: $(PROJECT_DIR)/models/pipeline.pmml
+export: $(PROJECT_DIR)/models/pipeline.pmml $(PROJECT_DIR)/models/pipeline.manifest
 
 ## Delete all compiled Python files and derived data files
 clean:
@@ -84,6 +100,32 @@ $(PROJECT_DIR)/models/results.txt: src/models/evaluate.py $(PROJECT_DIR)/models/
 
 $(PROJECT_DIR)/models/pipeline.pmml: src/models/export.py $(PROJECT_DIR)/models/pipeline.pkl
 	$(PYTHON_INTERPRETER) src/models/export.py $(PROJECT_DIR)/models/pipeline.pkl $(PROJECT_DIR)/models/pipeline.pmml
+
+$(PROJECT_DIR)/models/pipeline.manifest: $(PROJECT_DIR)/models/pipeline.pmml
+	@echo "::: pmml md5 checksum:  " `$(MD5) $(PROJECT_DIR)/models/pipeline.pmml` > $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: timestamp:          " `date -u` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: host:               " `hostname` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: user:               " `whoami` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: data md5 checksums:" >> $(PROJECT_DIR)/models/pipeline.manifest
+	@$(MD5) $(PROJECT_DIR)/data/processed/* >> $(PROJECT_DIR)/models/pipeline.manifest
+ifeq (True,$(IN_GIT_REPO))
+	@echo "::: git remotes:" >> $(PROJECT_DIR)/models/pipeline.manifest
+	@git remote -v  >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: git head:           " `git rev-parse HEAD` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: git uncommitted:" >> $(PROJECT_DIR)/models/pipeline.manifest
+	@git status -s  >> $(PROJECT_DIR)/models/pipeline.manifest
+else
+	@echo "::: not in a git repo!" >> $(PROJECT_DIR)/models/pipeline.manifest
+endif
+	@echo "::: python version:     " `$(PYTHON_INTERPRETER) --version 2>&1` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: pip packages:" >> $(PROJECT_DIR)/models/pipeline.manifest
+	@pip freeze >> $(PROJECT_DIR)/models/pipeline.manifest
+ifeq (True,$(HAS_CONDA))
+	@echo "::: conda version:      " `conda --version` >> $(PROJECT_DIR)/models/pipeline.manifest
+	@echo "::: conda packages:"  >> $(PROJECT_DIR)/models/pipeline.manifest
+	@conda list >> $(PROJECT_DIR)/models/pipeline.manifest
+endif
+	@echo "pipeline manifest written to $(PROJECT_DIR)/models/pipeline.manifest"
 
 #################################################################################
 # Self Documenting Commands                                                     #
