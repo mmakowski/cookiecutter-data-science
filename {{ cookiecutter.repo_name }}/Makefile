@@ -86,10 +86,7 @@ test_environment:
 # PROJECT RULES                                                                 #
 #################################################################################
 
-$(PROJECT_DIR)/data/processed/train.tsv: src/data/process.py $(PROJECT_DIR)/data/raw
-	$(PYTHON_INTERPRETER) src/data/process.py $(PROJECT_DIR)/data/raw $(PROJECT_DIR)/data/processed
-
-$(PROJECT_DIR)/data/processed/holdout.tsv: src/data/process.py $(PROJECT_DIR)/data/raw
+$(PROJECT_DIR)/data/processed/train.tsv $(PROJECT_DIR)/data/processed/holdout.tsv: src/data/process.py $(PROJECT_DIR)/data/raw
 	$(PYTHON_INTERPRETER) src/data/process.py $(PROJECT_DIR)/data/raw $(PROJECT_DIR)/data/processed
 
 $(PROJECT_DIR)/models/pipeline.pkl: src/models/train.py $(PROJECT_DIR)/data/processed/train.tsv
