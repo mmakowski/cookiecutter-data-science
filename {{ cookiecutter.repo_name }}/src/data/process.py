@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+
 import logging
 import click
 from sklearn.model_selection import train_test_split
@@ -18,6 +20,7 @@ def main(input_dir, output_dir):
     id_text_labels = _read_raw_data(base_path)
     logger.info("parsed %d examples", len(id_text_labels))
     train, holdout = _train_holdout_split(id_text_labels)
+    os.makedirs(output_dir, exist_ok=True)
     _write_tsv("%s/train.tsv" % output_dir, train)
     _write_tsv("%s/holdout.tsv" % output_dir, holdout)
     logger.info("data processing completed")
